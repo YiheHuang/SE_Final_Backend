@@ -30,7 +30,7 @@ public class TaskService {
 
         if (taskIds.isEmpty()) return List.of();
 
-        List<Task> tasks = taskRepository.findByTypeAndIdIn("SPORT", taskIds);
+        List<Task> tasks = taskRepository.findByTypeAndIdIn("sport", taskIds);
 
         return tasks.stream().map(task -> {
             Map<String, Object> map = new HashMap<>();
@@ -45,7 +45,7 @@ public class TaskService {
     }
 
     public void addTask(Integer userId, Task task) {
-        task.setType("SPORT");
+        task.setType("sport");
         taskRepository.save(task);
 
         UserTask ut = new UserTask();
@@ -85,7 +85,7 @@ public class TaskService {
 
             Task task = new Task();
             task.setTitle(req.getTitle());
-            task.setType("SPORT");
+            task.setType("sport");
             task.setStatus("TODO");
             task.setBeginTime(LocalDateTime.of(date, start));
             task.setEndTime(LocalDateTime.of(date, end));
