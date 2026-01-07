@@ -15,7 +15,7 @@ public class FamilyController {
 
     private final UserService userService;
 
-    @GetMapping("/members")
+    @GetMapping("/getmembers")
     public List<Map<String, Object>> members(
             @RequestParam Integer userId
     ) {
