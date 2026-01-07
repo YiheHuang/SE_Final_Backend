@@ -10,7 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
+import java.util.stream.Collectors;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class UserService {
@@ -163,4 +166,21 @@ public class UserService {
                 .filter(user -> familyId.equals(user.getFamilyId()))
                 .collect(java.util.stream.Collectors.toList());
     }
+      
+     public List<Map<String, Object>> members(Integer userId) {
+
+        User self = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("用户不存在"));
+
+        List<User> users = userRepository.findByFamilyId(self.getFamilyId());
+
+        return users.stream()
+                .map(u -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", u.getId());
+                    m.put("name", u.getName());
+                    return m;
+                })
+                .collect(Collectors.toList());
+     }
 }

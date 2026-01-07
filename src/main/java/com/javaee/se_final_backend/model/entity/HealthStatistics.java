@@ -21,5 +21,6 @@ public class HealthStatistics {
     private LocalDateTime beginDate;
     private LocalDateTime endDate;
     private String report;
+    private Integer rating;
 }
 
