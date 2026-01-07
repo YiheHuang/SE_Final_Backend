@@ -35,3 +35,17 @@ out/
 
 ### VS Code ###
 .vscode/
+/.idea/
+
+# Ignore application properties with credentials
+src/main/resources/application.properties
+
+# Environment files
+.env
+.env.local
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
