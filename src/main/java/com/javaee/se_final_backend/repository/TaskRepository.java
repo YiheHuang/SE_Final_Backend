@@ -45,7 +45,7 @@ public interface TaskRepository extends JpaRepository<Task, Integer>{
                                @Param("weekEnd") LocalDateTime weekEnd);
 
     // 查询某月有任务的日期
-    @Query(value = "SELECT DISTINCT DATE_FORMAT(t.begin_time, '%Y-%m-%d') " + // 修改这里：把 DATE 改为 DATE_FORMAT
+    @Query(value = "SELECT DISTINCT DATE_FORMAT(t.begin_time, '%Y-%m-%d') " +
             "FROM task t " +
             "WHERE t.id IN :taskIds " +
             "AND t.begin_time >= :monthStart " +
@@ -56,8 +56,13 @@ public interface TaskRepository extends JpaRepository<Task, Integer>{
                                     @Param("monthEnd") LocalDateTime monthEnd);
 
     // 查询用户在指定时间段内的所有任务（用于冲突检测）
-    @Query("SELECT t FROM Task t WHERE t.id IN :taskIds AND t.parentId = t.id AND " +
-            "((t.beginTime < :endTime AND t.endTime > :beginTime))")
+    @Query("SELECT t FROM Task t WHERE t.id IN :taskIds AND " +
+            "((t.beginTime < :endTime AND t.endTime > :beginTime)) AND " +
+            "(" +
+            "  t.parentId != t.id " +
+            "  OR " +
+            "  (t.parentId = t.id AND NOT EXISTS (SELECT s FROM Task s WHERE s.parentId = t.id AND s.id != t.id))" +
+            ")")
     List<Task> findConflictingTasks(@Param("taskIds") List<Integer> taskIds,
                                     @Param("beginTime") LocalDateTime beginTime,
                                     @Param("endTime") LocalDateTime endTime);
