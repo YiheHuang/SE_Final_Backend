@@ -49,7 +49,7 @@ public class UserController {
         return userService.addFamilyMember(request.getAdminId(), request.getMemberInfo());
     }
 
-    @GetMapping("/family/members")
+    @GetMapping("/user/family/members")
     public List<User> getFamilyMembers(@RequestParam Integer familyId) {
         return userService.getFamilyMembers(familyId);
     }
