@@ -554,22 +554,48 @@ public class TaskManageService {
         }
 
         // 查询统计数据
-        List<Object[]> stats = taskRepository.getTaskStatisticsByType(taskIds, startTime, endTime);
+        List<Task> tasks = taskRepository.findTasksInWeek(taskIds, startTime, endTime);
 
-        // 计算总时长
-        long totalMinutes = stats.stream()
-                .mapToLong(s -> s[1] != null ? ((Number) s[1]).longValue() : 0)
-                .sum();
+        Map<String, Long> typeDurationMap = new HashMap<>();
+        long totalMinutesAll = 0;
 
-        // 构建结果
-        return stats.stream()
-                .map(s -> {
-                    String type = (String) s[0];
-                    long minutes = s[1] != null ? ((Number) s[1]).longValue() : 0;
-                    double percentage = totalMinutes > 0 ?
-                            Math.round(minutes * 1000.0 / totalMinutes) / 10.0 : 0;
+        for (Task task : tasks) {
+            long duration = java.time.Duration.between(task.getBeginTime(), task.getEndTime()).toMinutes();
+
+            boolean shouldCount = false;
+
+            boolean isSubTask = task.getParentId() != null && !task.getParentId().equals(task.getId());
+
+            if (isSubTask) {
+                shouldCount = true;
+            } else {
+                List<Task> subTasks = taskRepository.findSubTasksByParentId(task.getId());
+
+                if (subTasks.isEmpty()) {
+                    shouldCount = true;
+                } else {
+                    shouldCount = false;
+                }
+            }
+
+            if (shouldCount) {
+                // 累加时间到对应的类型
+                typeDurationMap.merge(task.getType(), duration, Long::sum);
+                totalMinutesAll += duration;
+            }
+        }
+
+        // 5. 构建返回结果 DTO (计算百分比)
+        long finalTotal = totalMinutesAll;
+        return typeDurationMap.entrySet().stream()
+                .map(entry -> {
+                    String type = entry.getKey();
+                    long minutes = entry.getValue();
+                    double percentage = finalTotal > 0 ?
+                            Math.round(minutes * 1000.0 / finalTotal) / 10.0 : 0;
                     return new TaskStatisticsDTO(type, minutes, percentage);
                 })
+                // 按时长降序排序
                 .sorted((a, b) -> Long.compare(b.getTotalMinutes(), a.getTotalMinutes()))
                 .collect(Collectors.toList());
     }
