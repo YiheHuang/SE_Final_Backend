@@ -21,5 +21,9 @@ public class User {
     private String phone;
     private String role;
     private String password;
+    // access control flags stored as integers (0 = denied, 1 = allowed)
+    private Integer taskAccess;
+    private Integer healthAccess;
+    private Integer financeAccess;
 }
 
