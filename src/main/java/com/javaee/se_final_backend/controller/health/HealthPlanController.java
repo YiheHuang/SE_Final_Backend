@@ -1,7 +1,7 @@
 package com.javaee.se_final_backend.controller.health;
 
 import com.javaee.se_final_backend.model.entity.Task;
-import com.javaee.se_final_backend.service.TaskService;
+import com.javaee.se_final_backend.service.HealthPlanService;
 import com.javaee.se_final_backend.model.DTO.WeeklyTaskRequest;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,33 +14,33 @@ import java.util.Map;
 @CrossOrigin
 public class HealthPlanController {
     @Autowired
-    private TaskService taskService;
+    private HealthPlanService healthPlanService;
 
     @GetMapping
     public List<Map<String, Object>> list(@RequestParam Integer userId) {
-        return taskService.getTasks(userId);
+        return healthPlanService.getTasks(userId);
     }
 
     @PostMapping
     public void add(@RequestParam Integer userId,
                     @RequestBody Task task) {
-        taskService.addTask(userId, task);
+        healthPlanService.addTask(userId, task);
     }
 
     @PutMapping("/{id}")
     public void update(@PathVariable Integer id,
                        @RequestBody Task task) {
-        taskService.updateTask(id, task);
+        healthPlanService.updateTask(id, task);
     }
 
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Integer id) {
-        taskService.deleteTask(id);
+        healthPlanService.deleteTask(id);
     }
 
     @PostMapping("/weekly")
     public void createWeeklyPlan(@RequestParam Integer userId,
                                  @RequestBody WeeklyTaskRequest req) {
-        taskService.createWeeklyTasks(userId, req);
+        healthPlanService.createWeeklyTasks(userId, req);
     }
 }

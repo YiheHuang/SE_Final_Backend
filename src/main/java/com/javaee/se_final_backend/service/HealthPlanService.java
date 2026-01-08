@@ -14,7 +14,7 @@ import java.util.Map;
 import java.time.*;
 
 @Service
-public class TaskService {
+public class HealthPlanService {
 
     @Autowired
     private TaskRepository taskRepository;

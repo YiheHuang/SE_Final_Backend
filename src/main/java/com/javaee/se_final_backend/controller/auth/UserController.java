@@ -1,4 +1,4 @@
-package com.javaee.se_final_backend.controller;
+package com.javaee.se_final_backend.controller.auth;
 
 import com.javaee.se_final_backend.model.DTO.AddMemberRequest;
 import com.javaee.se_final_backend.model.DTO.CreateFamilyRequest;
