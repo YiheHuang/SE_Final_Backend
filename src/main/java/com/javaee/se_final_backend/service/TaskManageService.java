@@ -112,15 +112,9 @@ public class TaskManageService {
         LocalDateTime monthStart = LocalDateTime.of(year, month, 1, 0, 0);
         LocalDateTime monthEnd = monthStart.plusMonths(1);
 
-        List<Integer> taskIds;
-        if (user.getFamilyId() != null) {
-            taskIds = userTaskRepository.findTaskIdsByFamilyId(user.getFamilyId());
-        } else {
-            taskIds = userTaskRepository.findByUserId(userId).stream()
-                    .map(UserTask::getTaskId)
-                    .collect(Collectors.toList());
-        }
-
+        List<Integer> taskIds = userTaskRepository.findByUserId(userId).stream()
+                .map(UserTask::getTaskId)
+                .collect(Collectors.toList());
         if (taskIds.isEmpty()) {
             return Collections.emptyList();
         }
@@ -246,7 +240,6 @@ public class TaskManageService {
         // 6. 创建任务 (循环创建平行的独立任务)
         List<Task> createdTasks = new ArrayList<>();
 
-        // 【修改点】：不再维护 firstTaskId，因为后续任务不需要指向第一周
 
         for (int week = 0; week < repeatWeeks; week++) {
             LocalDateTime weekBegin = beginTime.plusWeeks(week);
@@ -264,9 +257,6 @@ public class TaskManageService {
             // 先保存以获取 ID
             taskRepository.save(task);
 
-            // 【核心修改点】：
-            // 无论是不是重复任务，parentId 永远指向自己。
-            // 这样每一周的任务都是一个独立的“主任务”，不再从属于第一周。
             task.setParentId(task.getId());
             taskRepository.save(task);
 
@@ -281,8 +271,6 @@ public class TaskManageService {
             }
 
             // 处理复合事务的子任务
-            // 如果这个任务本身是复合任务（比如"每周例会"包含"议程1"、"议程2"），
-            // 那么每一周的独立任务下，都会挂载属于那一周的子任务。
             if (Boolean.TRUE.equals(request.getIsComposite()) &&
                     request.getSubTasks() != null && !request.getSubTasks().isEmpty()) {
 
@@ -317,7 +305,6 @@ public class TaskManageService {
             }
         }
 
-        // 返回第一个创建的任务详情（仅仅是为了响应格式，实际上它们已经是独立任务了）
         return ApiResponse.success("创建成功", getTaskDetail(createdTasks.get(0).getId()));
     }
 
@@ -455,17 +442,14 @@ public class TaskManageService {
                     allTaskIds.add(rt.getId());
                 }
 
-                // 1. 先删除所有UserTask关联
                 for (Integer id : allTaskIds) {
                     userTaskRepository.deleteByTaskId(id);
                 }
 
-                // 2. 清除所有parentId（解除外键约束）
                 for (Integer id : allTaskIds) {
                     taskRepository.clearParentId(id);
                 }
 
-                // 3. 删除所有任务
                 for (Integer id : allTaskIds) {
                     taskRepository.deleteTaskById(id);
                 }
@@ -481,20 +465,20 @@ public class TaskManageService {
                 }
                 toDeleteIds.add(taskId);
 
-                // 1. 删除UserTask关联
+                // 删除UserTask关联
                 for (Integer id : toDeleteIds) {
                     userTaskRepository.deleteByTaskId(id);
                 }
 
-                // 2. 清除parentId
+                // 清除parentId
                 for (Integer id : toDeleteIds) {
                     taskRepository.clearParentId(id);
                 }
 
-                // 3. 清除其他任务对当前任务的引用
+                // 清除其他任务对当前任务的引用
                 taskRepository.clearParentIdByParent(taskId);
 
-                // 4. 删除任务
+                // 删除任务
                 for (Integer id : toDeleteIds) {
                     taskRepository.deleteTaskById(id);
                 }
