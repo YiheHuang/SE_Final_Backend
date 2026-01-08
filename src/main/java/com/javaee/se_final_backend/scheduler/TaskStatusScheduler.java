@@ -27,14 +27,14 @@ public class TaskStatusScheduler {
         LocalDateTime now = LocalDateTime.now();
 
         int todoToDoing = taskRepository.updateTodoToDoing();
-        int doingToDone = taskRepository.updateDoingToDone();
+
 
         log.info("Task status update finished");
 
-        if (todoToDoing > 0 || doingToDone > 0) {
+        if (todoToDoing > 0 ) {
             log.info(
-                    "Task status updated: TODO->DOING={}, DOING->DONE={}, time={}",
-                    todoToDoing, doingToDone, now
+                    "Task status updated: TODO->DOING={},  time={}",
+                    todoToDoing, now
             );
         }
     }

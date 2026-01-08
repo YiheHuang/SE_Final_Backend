@@ -14,23 +14,15 @@ public interface TaskRepository extends JpaRepository<Task, Integer>{
     List<Task> findByTypeAndIdIn(String type, List<Integer> taskIds);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("""
-    update Task t
+    @Query(value = """
+    update task t
     set t.status = 'DOING'
     where t.status = 'TODO'
-      and CURRENT_TIMESTAMP >= t.beginTime
-      and CURRENT_TIMESTAMP < t.endTime
-""")
+      and NOW() >= DATE_ADD(t.begin_time, INTERVAL 8 HOUR)
+      and NOW() < DATE_ADD(t.end_time, INTERVAL 8 HOUR)
+    """, nativeQuery = true)
     int updateTodoToDoing();
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("""
-    update Task t
-    set t.status = 'DONE'
-    where t.status = 'DOING' or t.status = 'TODO'
-      and CURRENT_TIMESTAMP >= t.endTime
-""")
-    int updateDoingToDone();
 
     // 根据ID列表查询任务
     List<Task> findByIdIn(List<Integer> taskIds);
