@@ -247,7 +247,7 @@ public class FinanceService {
     // JSON-array import via API removed; file-only upload supported via importOrdersFromFile.
 
     @Transactional
-    public int importOrdersFromFile(org.springframework.web.multipart.MultipartFile file) throws Exception {
+    public int importOrdersFromFile(org.springframework.web.multipart.MultipartFile file, Integer uid) throws Exception {
         if (file == null || file.isEmpty()) return 0;
         String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase();
         byte[] bytes = file.getBytes();
@@ -257,7 +257,7 @@ public class FinanceService {
         if (text.startsWith("[")) {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             List<Map<String, Object>> orders = mapper.readValue(text, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>(){});
-            return importOrders(orders);
+            return importOrders(orders, uid);
         }
 
         // otherwise treat as CSV (header expected)
@@ -285,19 +285,17 @@ public class FinanceService {
                 orders.add(map);
             } catch (Exception ignored) {}
         }
-        return importOrders(orders);
+        return importOrders(orders, uid);
     }
 
     // helper to import a list of order maps (from JSON or CSV parsing)
     @Transactional
-    public int importOrders(List<Map<String, Object>> orders) {
+    public int importOrders(List<Map<String, Object>> orders, Integer uid) {
         if (orders == null || orders.isEmpty()) return 0;
         int created = 0;
         for (Map<String, Object> o : orders) {
             try {
                 BillCreateRequest req = new BillCreateRequest();
-                // userId may be Integer or String
-                Integer uid = null;
                 if (o.containsKey("userId") && o.get("userId") != null) {
                     Object v = o.get("userId");
                     if (v instanceof Number) uid = ((Number) v).intValue();

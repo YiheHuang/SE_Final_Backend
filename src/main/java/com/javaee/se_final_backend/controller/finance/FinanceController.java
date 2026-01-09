@@ -147,10 +147,10 @@ public class FinanceController {
     }
 
     @PostMapping("/import/upload")
-    public Map<String, Object> uploadImport(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+    public Map<String, Object> uploadImport(@RequestParam("file") org.springframework.web.multipart.MultipartFile file, @RequestParam("uid") Integer uid) {
         log.info("uploadImport called, file={}", file == null ? null : file.getOriginalFilename());
         try {
-            int created = financeService.importOrdersFromFile(file);
+            int created = financeService.importOrdersFromFile(file, uid);
             log.info("import completed, created={}", created);
             return Map.of("ok", true, "imported", created);
         } catch (Exception ex) {
