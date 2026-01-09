@@ -21,6 +21,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +33,7 @@ public class FinanceService {
     private final UserRepository userRepository;
     private final BudgetRepository budgetRepository;
     private final BudgetItemRepository budgetItemRepository;
+    private final Logger log = LoggerFactory.getLogger(FinanceService.class);
     private static final java.util.List<String> PREDEFINED_CATEGORIES = java.util.List.of(
             "餐饮","出行","购物","娱乐","日用","医疗","教育","交通","工资","转账","其他"
     );
