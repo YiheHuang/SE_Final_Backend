@@ -37,11 +37,11 @@ public interface TaskRepository extends JpaRepository<Task, Integer>{
                                @Param("weekEnd") LocalDateTime weekEnd);
 
     // 查询某月有任务的日期
-    @Query(value = "SELECT DISTINCT DATE_FORMAT(t.begin_time, '%Y-%m-%d') " +
+    @Query(value = "SELECT DISTINCT DATE_FORMAT(DATE_ADD(t.begin_time, INTERVAL 8 HOUR), '%Y-%m-%d') " +
             "FROM task t " +
             "WHERE t.id IN :taskIds " +
-            "AND t.begin_time >= :monthStart " +
-            "AND t.begin_time < :monthEnd",
+            "AND DATE_ADD(t.begin_time, INTERVAL 8 HOUR) >= :monthStart " +
+            "AND DATE_ADD(t.begin_time, INTERVAL 8 HOUR) < :monthEnd",
             nativeQuery = true)
     List<String> findDatesWithTasks(@Param("taskIds") List<Integer> taskIds,
                                     @Param("monthStart") LocalDateTime monthStart,
