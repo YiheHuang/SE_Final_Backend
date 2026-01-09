@@ -34,21 +34,6 @@ public class UserController {
         return userService.getAllUsers();
     }
 
-    @PostMapping("/family/register")
-    public FamilyRegisterResponse registerFamily(@RequestBody FamilyRegisterRequest request) {
-        return userService.registerFamily(request);
-    }
-
-    @PostMapping("/family/create")
-    public FamilyRegisterResponse createFamily(@RequestBody CreateFamilyRequest request) {
-        return userService.createFamily(request.getAdminId(), request.getFamilyName());
-    }
-
-    @PostMapping("/family/add-member")
-    public FamilyRegisterResponse addFamilyMember(@RequestBody AddMemberRequest request) {
-        return userService.addFamilyMember(request.getAdminId(), request.getMemberInfo());
-    }
-
     @GetMapping("/user/family/members")
     public List<User> getFamilyMembers(@RequestParam Integer familyId) {
         return userService.getFamilyMembers(familyId);

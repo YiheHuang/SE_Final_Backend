@@ -4,7 +4,6 @@ import com.javaee.se_final_backend.model.entity.Task;
 import com.javaee.se_final_backend.model.entity.UserTask;
 import com.javaee.se_final_backend.repository.TaskRepository;
 import com.javaee.se_final_backend.repository.UserTaskRepository;
-import com.javaee.se_final_backend.model.DTO.WeeklyTaskRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -23,6 +22,7 @@ public class HealthPlanService {
     private UserTaskRepository userTaskRepository;
 
     public List<Map<String, Object>> getTasks(Integer userId) {
+
         List<UserTask> relations = userTaskRepository.findByUserId(userId);
         List<Integer> taskIds = relations.stream()
                 .map(UserTask::getTaskId)
@@ -30,7 +30,12 @@ public class HealthPlanService {
 
         if (taskIds.isEmpty()) return List.of();
 
-        List<Task> tasks = taskRepository.findByTypeAndIdIn("sport", taskIds);
+        List<Task> tasks =
+                taskRepository.findByTypeAndStatusNotAndIdIn(
+                        "sport",
+                        "DONE",
+                        taskIds
+                );
 
         return tasks.stream().map(task -> {
             Map<String, Object> map = new HashMap<>();
@@ -38,14 +43,29 @@ public class HealthPlanService {
             map.put("title", task.getTitle());
             map.put("status", task.getStatus());
             map.put("time",
-                    task.getBeginTime() + " - " +
-                            task.getEndTime());
+                    task.getBeginTime() + " - " + task.getEndTime());
             return map;
         }).toList();
     }
 
-    public void addTask(Integer userId, Task task) {
+    public void addTaskByDate(Integer userId,
+                              String title,
+                              String date,
+                              String startTime,
+                              String endTime) {
+
+        LocalDate d = LocalDate.parse(date);
+        LocalTime start = LocalTime.parse(startTime);
+        LocalTime end = LocalTime.parse(endTime);
+
+        Task task = new Task();
+        task.setTitle(title);
         task.setType("sport");
+        task.setStatus("TODO");
+        task.setBeginTime(LocalDateTime.of(d, start));
+        task.setEndTime(LocalDateTime.of(d, end));
+        task.setProgress(0);
+
         taskRepository.save(task);
 
         UserTask ut = new UserTask();
@@ -54,51 +74,9 @@ public class HealthPlanService {
         userTaskRepository.save(ut);
     }
 
-    public void updateTask(Integer id, Task newTask) {
-        Task task = taskRepository.findById(id).orElseThrow();
-        task.setTitle(newTask.getTitle());
-        task.setBeginTime(newTask.getBeginTime());
-        task.setEndTime(newTask.getEndTime());
-        task.setStatus(newTask.getStatus());
-        taskRepository.save(task);
-    }
-
     public void deleteTask(Integer id) {
         taskRepository.deleteById(id);
     }
-
-    public void createWeeklyTasks(Integer userId, WeeklyTaskRequest req) {
-
-        LocalDate today = LocalDate.now();
-
-        // 找到“下一个指定星期几”
-        int diff = req.getWeekDay() - today.getDayOfWeek().getValue();
-        if (diff < 0) diff += 7;
-        LocalDate firstDate = today.plusDays(diff);
-
-        LocalTime start = LocalTime.parse(req.getStartTime());
-        LocalTime end = LocalTime.parse(req.getEndTime());
-
-        for (int i = 0; i < req.getWeeks(); i++) {
-
-            LocalDate date = firstDate.plusWeeks(i);
-
-            Task task = new Task();
-            task.setTitle(req.getTitle());
-            task.setType("sport");
-            task.setStatus("TODO");
-            task.setBeginTime(LocalDateTime.of(date, start));
-            task.setEndTime(LocalDateTime.of(date, end));
-            task.setProgress(0);
-
-            taskRepository.save(task);
-
-            UserTask ut = new UserTask();
-            ut.setUserId(userId);
-            ut.setTaskId(task.getId());
-            userTaskRepository.save(ut);
-        }
-    }
-
 }
+
 

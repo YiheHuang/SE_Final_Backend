@@ -290,7 +290,7 @@ public class FinanceService {
 
     // helper to import a list of order maps (from JSON or CSV parsing)
     @Transactional
-    private int importOrders(List<Map<String, Object>> orders) {
+    public int importOrders(List<Map<String, Object>> orders) {
         if (orders == null || orders.isEmpty()) return 0;
         int created = 0;
         for (Map<String, Object> o : orders) {

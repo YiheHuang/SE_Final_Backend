@@ -97,4 +97,5 @@ public interface TaskRepository extends JpaRepository<Task, Integer>{
     @Modifying
     @Query(value = "DELETE FROM task WHERE id = :taskId", nativeQuery = true)
     void deleteTaskById(@Param("taskId") Integer taskId);
+    List<Task> findByTypeAndStatusNotAndIdIn(String type, String status, List<Integer> ids);
 }

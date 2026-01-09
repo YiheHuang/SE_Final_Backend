@@ -2,7 +2,6 @@ package com.javaee.se_final_backend.controller.health;
 
 import com.javaee.se_final_backend.model.entity.Task;
 import com.javaee.se_final_backend.service.HealthPlanService;
-import com.javaee.se_final_backend.model.DTO.WeeklyTaskRequest;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -13,6 +12,7 @@ import java.util.Map;
 @RequestMapping("/api/health/plan")
 @CrossOrigin
 public class HealthPlanController {
+
     @Autowired
     private HealthPlanService healthPlanService;
 
@@ -23,24 +23,20 @@ public class HealthPlanController {
 
     @PostMapping
     public void add(@RequestParam Integer userId,
-                    @RequestBody Task task) {
-        healthPlanService.addTask(userId, task);
-    }
+                    @RequestBody Map<String, String> body) {
 
-    @PutMapping("/{id}")
-    public void update(@PathVariable Integer id,
-                       @RequestBody Task task) {
-        healthPlanService.updateTask(id, task);
+        healthPlanService.addTaskByDate(
+                userId,
+                body.get("title"),
+                body.get("date"),
+                body.get("startTime"),
+                body.get("endTime")
+        );
     }
 
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Integer id) {
         healthPlanService.deleteTask(id);
     }
-
-    @PostMapping("/weekly")
-    public void createWeeklyPlan(@RequestParam Integer userId,
-                                 @RequestBody WeeklyTaskRequest req) {
-        healthPlanService.createWeeklyTasks(userId, req);
-    }
 }
+

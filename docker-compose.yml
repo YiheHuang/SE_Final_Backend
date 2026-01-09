@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  backend:
+    image: se-backend
+    container_name: se-backend
+    ports:
+      - "8080:8080"
+    volumes:
+      - /opt/se/uploads:/data/uploads
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    restart: always

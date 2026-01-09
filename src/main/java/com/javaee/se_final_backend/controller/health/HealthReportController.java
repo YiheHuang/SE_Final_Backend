@@ -5,6 +5,7 @@ import com.javaee.se_final_backend.service.ExaminationReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.beans.factory.annotation.Value;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.File;
@@ -17,7 +18,6 @@ import java.util.List;
 public class HealthReportController {
 
     private final ExaminationReportService service;
-    private static final String UPLOAD_DIR = "D:\\TJU\\SE\\FinalProject\\uploads\\ExaminationReports";
 
     @PostMapping("/upload")
     public void upload(
@@ -33,9 +33,20 @@ public class HealthReportController {
     }
 
     @GetMapping("/file")
-    public void file(@RequestParam String path, HttpServletResponse resp) throws Exception {
-        File file = new File(UPLOAD_DIR + path);
+    public void file(
+            @RequestParam String path,
+            HttpServletResponse resp
+    ) throws Exception {
+
+        File file = service.loadFile(path);
+
         resp.setContentType("application/pdf");
+        resp.setHeader(
+                "Content-Disposition",
+                "inline; filename=\"" + path + "\""
+        );
+
         Files.copy(file.toPath(), resp.getOutputStream());
     }
 }
+

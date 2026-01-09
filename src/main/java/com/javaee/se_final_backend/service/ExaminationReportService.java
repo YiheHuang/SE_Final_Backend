@@ -7,6 +7,8 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.beans.factory.annotation.Value;
+
 
 import java.io.File;
 import java.time.LocalDateTime;
@@ -20,14 +22,27 @@ public class ExaminationReportService {
 
     private final ExaminationReportRepository repository;
 
-    private static final String UPLOAD_DIR = "D:\\TJU\\SE\\FinalProject\\uploads\\ExaminationReports";
+    @Value("${file.upload-dir}")
+    private String uploadDir;
 
     public void upload(Integer userId, MultipartFile file) throws Exception {
-        File dir = new File(UPLOAD_DIR);
-        if (!dir.exists()) dir.mkdirs();
+
+        if (uploadDir == null) {
+            throw new IllegalStateException("file.upload-dir 未配置");
+        }
+
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("上传文件为空");
+        }
+
+        File dir = new File(uploadDir);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
 
         String filename = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-        File dest = new File(UPLOAD_DIR + filename);
+        File dest = new File(dir, filename); // ✅ 正确拼路径
+
         file.transferTo(dest);
 
         Map<String, Object> keyIndex = extractKeyIndex(dest);
@@ -45,7 +60,7 @@ public class ExaminationReportService {
         return repository.findByUserIdOrderByTimeDesc(userId);
     }
 
-    /** PDF 关键指标提取（核心） */
+    /** PDF 关键指标提取 */
     private Map<String, Object> extractKeyIndex(File pdf) throws Exception {
         Map<String, Object> map = new HashMap<>();
 
@@ -71,4 +86,21 @@ public class ExaminationReportService {
             map.put(mapKey, m.group(1));
         }
     }
+
+    public File loadFile(String filename) {
+
+        if (uploadDir == null) {
+            throw new IllegalStateException("file.upload-dir 未配置");
+        }
+
+        File file = new File(uploadDir, filename);
+
+        if (!file.exists()) {
+            throw new IllegalArgumentException("文件不存在");
+        }
+
+        return file;
+    }
+
 }
+
