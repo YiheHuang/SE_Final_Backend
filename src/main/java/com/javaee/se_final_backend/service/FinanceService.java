@@ -312,22 +312,47 @@ public class FinanceService {
                 String type = o.getOrDefault("type", "支出").toString();
                 req.setType(type);
 
-                BillItemDTO it = new BillItemDTO();
-                it.setContent(o.getOrDefault("content", "").toString());
-                it.setCategory(o.getOrDefault("category", "其他").toString());
-                Object priceObj = o.get("price");
-                try {
-                    java.math.BigDecimal p = priceObj == null ? java.math.BigDecimal.ZERO : new java.math.BigDecimal(priceObj.toString());
-                    it.setPrice(p);
-                } catch (Exception ex) {
-                    it.setPrice(java.math.BigDecimal.ZERO);
-                }
-                it.setTime(o.getOrDefault("time", "").toString());
-
                 List<BillItemDTO> items = new ArrayList<>();
-                items.add(it);
-                req.setItems(items);
 
+                // Check if this entry has an "items" array
+                if (o.containsKey("items") && o.get("items") instanceof List) {
+                    // Process items array
+                    List<?> itemsList = (List<?>) o.get("items");
+                    for (Object itemObj : itemsList) {
+                        if (itemObj instanceof Map) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> itemMap = (Map<String, Object>) itemObj;
+                            BillItemDTO it = new BillItemDTO();
+                            it.setContent(itemMap.getOrDefault("content", "").toString());
+                            it.setCategory(itemMap.getOrDefault("category", "其他").toString());
+                            Object priceObj = itemMap.get("price");
+                            try {
+                                java.math.BigDecimal p = priceObj == null ? java.math.BigDecimal.ZERO : new java.math.BigDecimal(priceObj.toString());
+                                it.setPrice(p);
+                            } catch (Exception ex) {
+                                it.setPrice(java.math.BigDecimal.ZERO);
+                            }
+                            it.setTime(itemMap.getOrDefault("time", "").toString());
+                            items.add(it);
+                        }
+                    }
+                } else {
+                    // Single item entry
+                    BillItemDTO it = new BillItemDTO();
+                    it.setContent(o.getOrDefault("content", "").toString());
+                    it.setCategory(o.getOrDefault("category", "其他").toString());
+                    Object priceObj = o.get("price");
+                    try {
+                        java.math.BigDecimal p = priceObj == null ? java.math.BigDecimal.ZERO : new java.math.BigDecimal(priceObj.toString());
+                        it.setPrice(p);
+                    } catch (Exception ex) {
+                        it.setPrice(java.math.BigDecimal.ZERO);
+                    }
+                    it.setTime(o.getOrDefault("time", "").toString());
+                    items.add(it);
+                }
+
+                req.setItems(items);
                 createBill(req);
                 created++;
             } catch (Exception ex) {
