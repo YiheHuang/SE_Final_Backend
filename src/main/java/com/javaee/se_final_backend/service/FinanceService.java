@@ -402,7 +402,7 @@ public class FinanceService {
     
     /* Budget operations */
     @Transactional
-    public Map<String, Object> getBudgetForMonth(Integer userId, String month) {
+    public Map<String, Object> getBudgetForMonth(Integer userId, String month, String scope) {
         try {
             java.time.YearMonth ym = java.time.YearMonth.parse(month);
             LocalDateTime b = ym.atDay(1).atStartOfDay();
@@ -418,7 +418,7 @@ public class FinanceService {
             }
 
             // compute spent by category for the user (family scope)
-            List<Integer> userIds = resolveUserIds(userId, "family");
+            List<Integer> userIds = resolveUserIds(userId, scope);
             List<Bill> bills = billRepository.findByUserIdInAndBeginDateBetween(userIds, b, e);
             Map<String, java.math.BigDecimal> spentByCat = new HashMap<>();
             java.math.BigDecimal totalSpent = java.math.BigDecimal.ZERO;
@@ -427,8 +427,11 @@ public class FinanceService {
                 for (BillItem it : items) {
                     java.math.BigDecimal price = it.getPrice() == null ? java.math.BigDecimal.ZERO : it.getPrice();
                     String cat = it.getCategory() == null ? "其他" : it.getCategory();
-                    spentByCat.put(cat, spentByCat.getOrDefault(cat, java.math.BigDecimal.ZERO).add(price));
-                    totalSpent = totalSpent.add(price);
+                    // Only count expenses toward "spent". Income should not increase spent.
+                    if (!"收入".equalsIgnoreCase(bill.getType())) {
+                        spentByCat.put(cat, spentByCat.getOrDefault(cat, java.math.BigDecimal.ZERO).add(price));
+                        totalSpent = totalSpent.add(price);
+                    }
                 }
             }
 
@@ -436,27 +439,8 @@ public class FinanceService {
             resp.put("month", month);
             resp.put("budget", budget == null ? java.math.BigDecimal.ZERO : sumBudgetItems(budget.getId()));
             resp.put("spent", totalSpent);
-            List<Map<String, Object>> cats = new ArrayList<>();
-            if (budget != null) {
-                List<BudgetItem> items = budgetItemRepository.findByBudgetId(budget.getId());
-                for (BudgetItem bi : items) {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("name", bi.getCategory());
-                    m.put("budget", bi.getTotal());
-                    m.put("spent", spentByCat.getOrDefault(bi.getCategory(), java.math.BigDecimal.ZERO));
-                    cats.add(m);
-                }
-            } else {
-                // return categories from spentByCat
-                for (var entry : spentByCat.entrySet()) {
-                    Map<String, Object> m = new HashMap<>();
-                    m.put("name", entry.getKey());
-                    m.put("budget", java.math.BigDecimal.ZERO);
-                    m.put("spent", entry.getValue());
-                    cats.add(m);
-                }
-            }
-            resp.put("categories", cats);
+            // For simplified model we only return total budget (stored as BudgetItems sum)
+            resp.put("categories", new ArrayList<Map<String, Object>>());
             return resp;
         } catch (Exception ex) {
             return Map.of("error", "invalid_month");
@@ -475,11 +459,21 @@ public class FinanceService {
     @Transactional
     public Map<String, Object> saveBudget(java.util.Map<String, Object> body) {
         try {
-            Integer userId = (Integer) body.get("userId");
+            // robustly parse userId (could be Integer, Long, Double or String)
+            Integer userId = null;
+            Object userIdObj = body.get("userId");
+            if (userIdObj instanceof Number) {
+                userId = ((Number) userIdObj).intValue();
+            } else if (userIdObj instanceof String) {
+                try { userId = Integer.parseInt((String) userIdObj); } catch (Exception ignored) {}
+            }
+            if (userId == null) {
+                return Map.of("ok", false, "error", "userId_required");
+            }
             String month = (String) body.get("month");
             java.math.BigDecimal budgetTotal = body.get("budget") == null ? java.math.BigDecimal.ZERO : new java.math.BigDecimal(body.get("budget").toString());
-            java.util.List<java.util.Map<String, Object>> categories = (java.util.List<java.util.Map<String, Object>>) body.get("categories");
 
+            String scope = body.get("scope") == null ? "self" : body.get("scope").toString();
             java.time.YearMonth ym = java.time.YearMonth.parse(month);
             LocalDateTime b = ym.atDay(1).atStartOfDay();
             LocalDateTime e = ym.atEndOfMonth().atTime(23,59,59);
@@ -499,20 +493,30 @@ public class FinanceService {
                 budgetItemRepository.deleteByBudgetId(budget.getId());
             }
 
-            if (categories != null) {
-                for (Map<String, Object> c : categories) {
-                    BudgetItem bi = new BudgetItem();
-                    bi.setBudgetId(budget.getId());
-                    String name = (String) c.get("name");
-                    if (name == null || !PREDEFINED_CATEGORIES.contains(name)) name = "其他";
-                    bi.setCategory(name);
-                    java.math.BigDecimal t = c.get("budget") == null ? java.math.BigDecimal.ZERO : new java.math.BigDecimal(c.get("budget").toString());
-                    bi.setTotal(t);
-                    budgetItemRepository.save(bi);
+            // Store the total budget as a single BudgetItem named "总预算"
+            BudgetItem bi = new BudgetItem();
+            bi.setBudgetId(budget.getId());
+            bi.setCategory("总预算");
+            bi.setTotal(budgetTotal);
+            bi = budgetItemRepository.save(bi);
+            // ensure persisted and read back authoritative total from DB
+            java.math.BigDecimal storedTotal = sumBudgetItems(budget.getId());
+            log.info("saveBudget: userId={}, month={}, scope={}, requestedBudget={}, storedTotal={}", userId, month, scope, budgetTotal, storedTotal);
+            // compute spent according to scope
+            List<Integer> userIds = resolveUserIds(userId, scope);
+            List<Bill> bills = billRepository.findByUserIdInAndBeginDateBetween(userIds, b, e);
+            java.math.BigDecimal totalSpent = java.math.BigDecimal.ZERO;
+            for (Bill bill : bills) {
+                List<BillItem> items = billItemRepository.findByBillId(bill.getId());
+                for (BillItem it : items) {
+                    java.math.BigDecimal price = it.getPrice() == null ? java.math.BigDecimal.ZERO : it.getPrice();
+                    if (!"收入".equalsIgnoreCase(bill.getType())) totalSpent = totalSpent.add(price);
                 }
             }
 
-            return Map.of("ok", true, "budgetId", budget.getId());
+            Map<String, Object> out = Map.of("ok", true, "budgetId", budget.getId(), "budget", storedTotal, "spent", totalSpent);
+            log.info("saveBudget result: {}", out);
+            return out;
         } catch (Exception ex) {
             return Map.of("ok", false, "error", ex.getMessage());
         }

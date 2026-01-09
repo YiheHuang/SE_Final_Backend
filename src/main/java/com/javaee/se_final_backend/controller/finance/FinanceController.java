@@ -102,13 +102,17 @@ public class FinanceController {
 
     @GetMapping("/budgets")
     public Map<String, Object> getBudget(@RequestParam Integer userId,
-                                         @RequestParam String month) {
-        return financeService.getBudgetForMonth(userId, month);
+                                         @RequestParam String month,
+                                         @RequestParam(defaultValue = "self") String scope) {
+        return financeService.getBudgetForMonth(userId, month, scope);
     }
 
     @PostMapping("/budgets")
     public Map<String, Object> saveBudget(@RequestBody Map<String, Object> body) {
-        return financeService.saveBudget(body);
+        log.info("saveBudget request body: {}", body);
+        Map<String, Object> out = financeService.saveBudget(body);
+        log.info("saveBudget response: {}", out);
+        return out;
     }
 
     @GetMapping("/categories")
