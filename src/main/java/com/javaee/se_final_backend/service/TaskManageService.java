@@ -205,7 +205,7 @@ public class TaskManageService {
         LocalDateTime endTime = LocalDateTime.parse(request.getEndTime(), DATETIME_FORMATTER);
 
         // 2. 验证时间
-        if (beginTime.isBefore(LocalDateTime.now())) {
+        if (beginTime.isBefore(LocalDateTime.now().plusHours(8))) {
             return ApiResponse.error("不能创建过去的任务");
         }
 
@@ -520,7 +520,7 @@ public class TaskManageService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("用户不存在"));
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now().plusHours(8);
         LocalDateTime startTime;
         LocalDateTime endTime;
 
