@@ -26,6 +26,9 @@ public class UserService {
 
     // 注册用户
     public User register(User user) {
+        user.setTaskAccess(1);
+        user.setHealthAccess(1);
+        user.setFinanceAccess(1);
         return userRepository.save(user);
     }
 
