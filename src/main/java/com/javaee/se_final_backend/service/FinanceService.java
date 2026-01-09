@@ -175,6 +175,10 @@ public class FinanceService {
         }).collect(Collectors.toList());
     }
 
+    public User getUserById(Integer id) {
+        return userRepository.findById(id).orElse(null);
+    }
+
     public BillSummaryResponse summary(Integer userId, LocalDateTime begin, LocalDateTime end, String scope) {
         List<Integer> userIds = resolveUserIds(userId, scope);
 
@@ -235,6 +239,99 @@ public class FinanceService {
 
     public java.util.List<String> getCategoryList() {
         return PREDEFINED_CATEGORIES;
+    }
+
+    // JSON-array import via API removed; file-only upload supported via importOrdersFromFile.
+
+    @Transactional
+    public int importOrdersFromFile(org.springframework.web.multipart.MultipartFile file) throws Exception {
+        if (file == null || file.isEmpty()) return 0;
+        String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase();
+        byte[] bytes = file.getBytes();
+        String text = new String(bytes, java.nio.charset.StandardCharsets.UTF_8).trim();
+
+        // if looks like JSON array
+        if (text.startsWith("[")) {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            List<Map<String, Object>> orders = mapper.readValue(text, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>(){});
+            return importOrders(orders);
+        }
+
+        // otherwise treat as CSV (header expected)
+        // simple CSV parser: split lines, first line header
+        String[] lines = text.split("\\r?\\n");
+        if (lines.length < 1) return 0;
+        String header = lines[0];
+        String[] cols = header.split(",");
+        Map<String, Integer> idx = new HashMap<>();
+        for (int i = 0; i < cols.length; i++) idx.put(cols[i].trim().toLowerCase(), i);
+
+        List<Map<String, Object>> orders = new ArrayList<>();
+        for (int r = 1; r < lines.length; r++) {
+            String line = lines[r].trim();
+            if (line.isEmpty()) continue;
+            String[] parts = line.split(",");
+            Map<String, Object> map = new HashMap<>();
+            try {
+                if (idx.containsKey("userid")) map.put("userId", Integer.parseInt(parts[idx.get("userid")].trim()));
+                if (idx.containsKey("type")) map.put("type", parts[idx.get("type")].trim());
+                if (idx.containsKey("content")) map.put("content", parts[idx.get("content")].trim());
+                if (idx.containsKey("category")) map.put("category", parts[idx.get("category")].trim());
+                if (idx.containsKey("price")) map.put("price", new java.math.BigDecimal(parts[idx.get("price")].trim()));
+                if (idx.containsKey("time")) map.put("time", parts[idx.get("time")].trim());
+                orders.add(map);
+            } catch (Exception ignored) {}
+        }
+        return importOrders(orders);
+    }
+
+    // helper to import a list of order maps (from JSON or CSV parsing)
+    @Transactional
+    private int importOrders(List<Map<String, Object>> orders) {
+        if (orders == null || orders.isEmpty()) return 0;
+        int created = 0;
+        for (Map<String, Object> o : orders) {
+            try {
+                BillCreateRequest req = new BillCreateRequest();
+                // userId may be Integer or String
+                Integer uid = null;
+                if (o.containsKey("userId") && o.get("userId") != null) {
+                    Object v = o.get("userId");
+                    if (v instanceof Number) uid = ((Number) v).intValue();
+                    else {
+                        try { uid = Integer.parseInt(v.toString()); } catch (Exception ignored) {}
+                    }
+                }
+                // default to system user if missing (use first admin user or 1)
+                if (uid == null) uid = 1;
+                req.setUserId(uid);
+
+                String type = o.getOrDefault("type", "支出").toString();
+                req.setType(type);
+
+                BillItemDTO it = new BillItemDTO();
+                it.setContent(o.getOrDefault("content", "").toString());
+                it.setCategory(o.getOrDefault("category", "其他").toString());
+                Object priceObj = o.get("price");
+                try {
+                    java.math.BigDecimal p = priceObj == null ? java.math.BigDecimal.ZERO : new java.math.BigDecimal(priceObj.toString());
+                    it.setPrice(p);
+                } catch (Exception ex) {
+                    it.setPrice(java.math.BigDecimal.ZERO);
+                }
+                it.setTime(o.getOrDefault("time", "").toString());
+
+                List<BillItemDTO> items = new ArrayList<>();
+                items.add(it);
+                req.setItems(items);
+
+                createBill(req);
+                created++;
+            } catch (Exception ex) {
+                // ignore individual row errors and continue
+            }
+        }
+        return created;
     }
 
     @Transactional
