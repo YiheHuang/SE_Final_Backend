@@ -14,13 +14,13 @@ public interface TaskRepository extends JpaRepository<Task, Integer>{
     List<Task> findByTypeAndIdIn(String type, List<Integer> taskIds);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query(value = """
-    update task t
+    @Query("""
+    update Task t
     set t.status = 'DOING'
     where t.status = 'TODO'
-      and NOW() >= DATE_ADD(t.begin_time, INTERVAL 8 HOUR)
-      and NOW() < DATE_ADD(t.end_time, INTERVAL 8 HOUR)
-    """, nativeQuery = true)
+      and CURRENT_TIMESTAMP >= t.beginTime
+      and CURRENT_TIMESTAMP < t.endTime
+""")
     int updateTodoToDoing();
 
 
@@ -37,11 +37,11 @@ public interface TaskRepository extends JpaRepository<Task, Integer>{
                                @Param("weekEnd") LocalDateTime weekEnd);
 
     // 查询某月有任务的日期
-    @Query(value = "SELECT DISTINCT DATE_FORMAT(DATE_ADD(t.begin_time, INTERVAL 8 HOUR), '%Y-%m-%d') " +
+    @Query(value = "SELECT DISTINCT DATE_FORMAT(t.begin_time, '%Y-%m-%d') " +
             "FROM task t " +
             "WHERE t.id IN :taskIds " +
-            "AND DATE_ADD(t.begin_time, INTERVAL 8 HOUR) >= :monthStart " +
-            "AND DATE_ADD(t.begin_time, INTERVAL 8 HOUR) < :monthEnd",
+            "AND t.begin_time >= :monthStart " +
+            "AND t.begin_time < :monthEnd",
             nativeQuery = true)
     List<String> findDatesWithTasks(@Param("taskIds") List<Integer> taskIds,
                                     @Param("monthStart") LocalDateTime monthStart,
